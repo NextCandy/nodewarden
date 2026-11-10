@@ -13,6 +13,9 @@ import {
 } from '../utils/jwt';
 import { applyCipherEmbeddedAttachmentMetadata, cipherToResponse } from './ciphers';
 import { LIMITS } from '../config/limits';
+
+// 加密后的 fileName / key 都是 EncString，正常只有几百字符；上限留足余量，只用于拦截滥用。
+const ATTACHMENT_METADATA_MAX_CHARS = 10_000;
 import { readActingDeviceIdentifier } from '../utils/device';
 import {
   deleteBlobObject,
@@ -192,7 +195,23 @@ export async function handleCreateAttachment(
     return errorResponse('fileName and key are required', 400);
   }
 
-  const fileSize = body.fileSize || 0;
+  // 在预留元数据阶段就校验申报大小与字段长度，避免伪造 size 或无限制造孤儿元数据行
+  // （对应 Vaultwarden 1.37.5 #7450：enforce quota at v2 metadata reservation）。
+  // 实际上传阶段仍会按真实字节数再次校验并修正 size。
+  if (typeof body.fileName !== 'string' || typeof body.key !== 'string') {
+    return errorResponse('fileName and key must be strings', 400);
+  }
+  if (body.fileName.length > ATTACHMENT_METADATA_MAX_CHARS || body.key.length > ATTACHMENT_METADATA_MAX_CHARS) {
+    return errorResponse('Attachment metadata is too large', 400);
+  }
+  const maxFileSize = getBlobStorageMaxBytes(env, LIMITS.attachment.maxFileSizeBytes);
+  const fileSize = Number(body.fileSize);
+  if (!Number.isSafeInteger(fileSize) || fileSize <= 0) {
+    return errorResponse('Invalid fileSize', 400);
+  }
+  if (fileSize > maxFileSize) {
+    return errorResponse(`File too large. Maximum size is ${Math.floor(maxFileSize / (1024 * 1024))}MB`, 413);
+  }
   const attachmentId = generateUUID();
 
   // Create attachment metadata
@@ -377,10 +396,12 @@ export async function handleUpdateAttachmentMetadata(
   if (Object.prototype.hasOwnProperty.call(body, 'fileName')) {
     const fileName = String(body.fileName || '').trim();
     if (!fileName) return errorResponse('fileName is required', 400);
+    if (fileName.length > ATTACHMENT_METADATA_MAX_CHARS) return errorResponse('Attachment metadata is too large', 400);
     attachment.fileName = fileName;
   }
   if (Object.prototype.hasOwnProperty.call(body, 'key')) {
     const key = body.key == null ? null : String(body.key || '').trim();
+    if (key && key.length > ATTACHMENT_METADATA_MAX_CHARS) return errorResponse('Attachment metadata is too large', 400);
     attachment.key = key || null;
   }
 

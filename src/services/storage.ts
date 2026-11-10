@@ -737,6 +737,16 @@ export class StorageService {
     return deleteStoredRefreshTokensByUserId(this.db, userId);
   }
 
+  // 凭据或 2FA 配置发生变化时统一调用：同时吊销刷新令牌与“记住此设备”的 2FA 令牌。
+  // 若只清理刷新令牌，旧的 remember token（30 天有效）仍可在攻击者再次获知密码后跳过新的 2FA，
+  // 与 Vaultwarden 1.37.3（#7682）的修复保持一致。
+  async revokeUserCredentialSessions(userId: string): Promise<void> {
+    await Promise.all([
+      deleteStoredRefreshTokensByUserId(this.db, userId),
+      deleteStoredTrustedTokensByUserId(this.db, userId),
+    ]);
+  }
+
   async deleteRefreshTokensByDevice(userId: string, deviceIdentifier: string): Promise<number> {
     return deleteStoredRefreshTokensByDevice(this.db, userId, deviceIdentifier);
   }

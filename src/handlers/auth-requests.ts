@@ -5,7 +5,7 @@ import { readAuthRequestDeviceInfo, readActingDeviceIdentifier } from '../utils/
 import { errorResponse, jsonResponse } from '../utils/response';
 import { isAuthRequestExpired } from '../services/storage-auth-request-repo';
 import { notifyAuthRequestResponse, notifyUserAuthRequest } from '../durable/notifications-hub';
-import { RateLimitService, getClientIdentifier } from '../services/ratelimit';
+import { RateLimitService, getClientIdentifier, lastForwardedForAddress } from '../services/ratelimit';
 import { LIMITS } from '../config/limits';
 
 const AUTH_REQUEST_TYPE_AUTHENTICATE_AND_UNLOCK = 0;
@@ -32,7 +32,7 @@ function isSerializedEncString(value: unknown): value is string {
 function getClientIp(request: Request): string | null {
   return (
     request.headers.get('CF-Connecting-IP') ||
-    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    lastForwardedForAddress(request) ||
     null
   );
 }

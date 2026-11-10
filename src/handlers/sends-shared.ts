@@ -409,7 +409,8 @@ export function sendToResponse(send: Send): SendResponse {
     emails: send.emails,
     authType: send.authType,
     disabled: send.disabled,
-    hideEmail: send.hideEmail,
+    // 新版 SDK 客户端要求 hideEmail 为非空布尔值（对齐 Vaultwarden #7283）。
+    hideEmail: !!send.hideEmail,
     revisionDate: send.updatedAt,
     expirationDate: send.expirationDate,
     deletionDate: send.deletionDate,

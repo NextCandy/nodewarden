@@ -543,7 +543,7 @@ export async function handleToken(request: Request, env: Env): Promise<Response>
         user.securityStamp = generateUUID();
         user.updatedAt = new Date().toISOString();
         await storage.saveUser(user);
-        await storage.deleteRefreshTokensByUserId(user.id);
+        await storage.revokeUserCredentialSessions(user.id);
         AuthService.invalidateUserCache(user.id);
         rememberRequested = false;
       } else {

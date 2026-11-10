@@ -774,7 +774,7 @@ export async function handleChangePassword(request: Request, env: Env, userId: s
   user.securityStamp = generateUUID();
   user.updatedAt = new Date().toISOString();
   await storage.saveUser(user);
-  await storage.deleteRefreshTokensByUserId(user.id);
+  await storage.revokeUserCredentialSessions(user.id);
   AuthService.invalidateUserCache(user.id);
   await writeAuditEvent(storage, {
     actorUserId: user.id,
@@ -1016,7 +1016,7 @@ export async function handlePutTwoFactorAuthenticator(request: Request, env: Env
   }
   user.updatedAt = new Date().toISOString();
   await storage.saveUser(user);
-  await storage.deleteRefreshTokensByUserId(user.id);
+  await storage.revokeUserCredentialSessions(user.id);
   AuthService.invalidateUserCache(user.id);
   await writeAuditEvent(storage, {
     actorUserId: user.id,
@@ -1095,7 +1095,7 @@ export async function handlePutTwoFactorYubiKey(request: Request, env: Env, user
   }
   user.updatedAt = new Date().toISOString();
   await storage.saveUser(user);
-  await storage.deleteRefreshTokensByUserId(user.id);
+  await storage.revokeUserCredentialSessions(user.id);
   AuthService.invalidateUserCache(user.id);
   await writeAuditEvent(storage, {
     actorUserId: user.id,
@@ -1248,7 +1248,7 @@ export async function handleDisableTwoFactorProvider(request: Request, env: Env,
   }
   user.updatedAt = new Date().toISOString();
   await storage.saveUser(user);
-  await storage.deleteRefreshTokensByUserId(user.id);
+  await storage.revokeUserCredentialSessions(user.id);
   AuthService.invalidateUserCache(user.id);
   await writeAuditEvent(storage, {
     actorUserId: user.id,
@@ -1319,7 +1319,7 @@ export async function handleSetTotpStatus(request: Request, env: Env, userId: st
     }
     user.updatedAt = new Date().toISOString();
     await storage.saveUser(user);
-    await storage.deleteRefreshTokensByUserId(user.id);
+    await storage.revokeUserCredentialSessions(user.id);
     AuthService.invalidateUserCache(user.id);
     await writeAuditEvent(storage, {
       actorUserId: user.id,
@@ -1343,7 +1343,7 @@ export async function handleSetTotpStatus(request: Request, env: Env, userId: st
     user.totpSecret = null;
     user.updatedAt = new Date().toISOString();
     await storage.saveUser(user);
-    await storage.deleteRefreshTokensByUserId(user.id);
+    await storage.revokeUserCredentialSessions(user.id);
     AuthService.invalidateUserCache(user.id);
     await writeAuditEvent(storage, {
       actorUserId: user.id,
@@ -1472,7 +1472,7 @@ export async function handleRecoverTwoFactor(request: Request, env: Env): Promis
   user.securityStamp = generateUUID();
   user.updatedAt = new Date().toISOString();
   await storage.saveUser(user);
-  await storage.deleteRefreshTokensByUserId(user.id);
+  await storage.revokeUserCredentialSessions(user.id);
   AuthService.invalidateUserCache(user.id);
   await rateLimit.clearLoginAttempts(recoverLimitKey);
   await safeWriteAuditEvent(env, {

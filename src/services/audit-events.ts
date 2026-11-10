@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { generateUUID } from '../utils/uuid';
 import { StorageService } from './storage';
+import { lastForwardedForAddress } from './ratelimit';
 
 export type AuditLogCategory = 'auth' | 'security' | 'device' | 'data' | 'system';
 export type AuditLogLevel = 'info' | 'warn' | 'error' | 'security';
@@ -119,7 +120,7 @@ export function auditRequestMetadata(request: Request): Record<string, unknown> 
   return {
     method: request.method,
     path: url.pathname,
-    ip: request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || null,
+    ip: request.headers.get('CF-Connecting-IP') || lastForwardedForAddress(request),
     userAgent: request.headers.get('User-Agent') || null,
   };
 }

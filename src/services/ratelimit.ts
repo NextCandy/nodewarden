@@ -416,16 +416,26 @@ function isLocalRequest(request: Request): boolean {
   return isLoopbackHost(request.headers.get('Host'));
 }
 
+// 返回 X-Forwarded-For 中最右侧的非空地址；不存在时返回 null。
+export function lastForwardedForAddress(request: Request): string | null {
+  const header = request.headers.get('X-Forwarded-For');
+  if (!header) return null;
+  const parts = header.split(',').map((part) => part.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : null;
+}
+
 export function getClientIdentifier(request: Request): string | null {
   // Strict fallback order:
   // 1) CF-Connecting-IP
   // 2) X-Real-IP
-  // 3) first item of X-Forwarded-For
+  // 3) last item of X-Forwarded-For
   // If none are present/valid, treat client IP as unavailable.
+  // 取 X-Forwarded-For 最右侧的地址：最左侧的值可由客户端任意伪造，用于绕过按 IP 的限流；
+  // 最右侧是最近一跳代理追加的地址（与 Vaultwarden 1.37.4 的处理一致）。
   const candidates: Array<string | null> = [
     request.headers.get('CF-Connecting-IP'),
     request.headers.get('X-Real-IP'),
-    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || null,
+    lastForwardedForAddress(request),
   ];
 
   for (const raw of candidates) {
